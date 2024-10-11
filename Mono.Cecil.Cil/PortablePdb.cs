@@ -240,6 +240,13 @@ namespace Mono.Cecil.Cil {
 
 	public sealed class PortablePdbWriterProvider : ISymbolWriterProvider
 	{
+		private bool embed_source;
+
+		public PortablePdbWriterProvider (bool embed_source = false)
+		{
+			this.embed_source = embed_source;
+		}
+
 		public ISymbolWriter GetSymbolWriter (ModuleDefinition module, string fileName)
 		{
 			Mixin.CheckModule (module);
@@ -265,7 +272,7 @@ namespace Mono.Cecil.Cil {
 			var metadata = new MetadataBuilder (module, this);
 			var writer = ImageWriter.CreateDebugWriter (module, metadata, stream);
 
-			return new PortablePdbWriter (metadata, module, writer, final_stream);
+			return new PortablePdbWriter (metadata, module, writer, final_stream, embed_source);
 		}
 	}
 
@@ -275,7 +282,7 @@ namespace Mono.Cecil.Cil {
 		readonly ModuleDefinition module;
 		readonly ImageWriter writer;
 		readonly Disposable<Stream> final_stream;
-
+		private readonly bool embed_source;
 		MetadataBuilder module_metadata;
 
 		internal byte [] pdb_checksum;
@@ -284,12 +291,14 @@ namespace Mono.Cecil.Cil {
 
 		bool IsEmbedded { get { return writer == null; } }
 
-		internal PortablePdbWriter (MetadataBuilder pdb_metadata, ModuleDefinition module)
+		internal PortablePdbWriter (MetadataBuilder pdb_metadata, ModuleDefinition module, bool embed_source = false)
 		{
 			this.pdb_metadata = pdb_metadata;
 			this.module = module;
 
 			this.module_metadata = module.metadata_builder;
+
+			this.embed_source = embed_source;
 
 			if (module_metadata != pdb_metadata)
 				this.pdb_metadata.metadata_builder = this.module_metadata;
@@ -297,11 +306,12 @@ namespace Mono.Cecil.Cil {
 			pdb_metadata.AddCustomDebugInformations (module);
 		}
 
-		internal PortablePdbWriter (MetadataBuilder pdb_metadata, ModuleDefinition module, ImageWriter writer, Disposable<Stream> final_stream)
+		internal PortablePdbWriter (MetadataBuilder pdb_metadata, ModuleDefinition module, ImageWriter writer, Disposable<Stream> final_stream, bool embed_source = false)
 			: this (pdb_metadata, module)
 		{
 			this.writer = writer;
 			this.final_stream = final_stream;
+			
 		}
 
 		public ISymbolReaderProvider GetReaderProvider ()
@@ -497,6 +507,12 @@ namespace Mono.Cecil.Cil {
 	}
 
 	public sealed class EmbeddedPortablePdbWriterProvider : ISymbolWriterProvider {
+		private bool embedSource;
+
+		public EmbeddedPortablePdbWriterProvider (bool embedSource = false)
+		{
+			this.embedSource = embedSource;
+		}
 
 		public ISymbolWriter GetSymbolWriter (ModuleDefinition module, string fileName)
 		{
@@ -504,7 +520,7 @@ namespace Mono.Cecil.Cil {
 			Mixin.CheckFileName (fileName);
 
 			var stream = new MemoryStream ();
-			var pdb_writer = (PortablePdbWriter) new PortablePdbWriterProvider ().GetSymbolWriter (module, stream);
+			var pdb_writer = (PortablePdbWriter) new PortablePdbWriterProvider (embedSource).GetSymbolWriter (module, stream);
 			return new EmbeddedPortablePdbWriter (stream, pdb_writer);
 		}
 
@@ -568,8 +584,11 @@ namespace Mono.Cecil.Cil {
 			directory.SizeOfData = (int) data.Length;
 
 			var debugHeaderEntries = new ImageDebugHeaderEntry [pdbDebugHeader.Entries.Length + 1];
-			for (int i = 0; i < pdbDebugHeader.Entries.Length; i++)
+
+			for (int i = 0; i < pdbDebugHeader.Entries.Length; i++) {
 				debugHeaderEntries [i] = pdbDebugHeader.Entries [i];
+			}
+
 			debugHeaderEntries [debugHeaderEntries.Length - 1] = new ImageDebugHeaderEntry (directory, data.ToArray ());
 
 			return new ImageDebugHeader (debugHeaderEntries);
