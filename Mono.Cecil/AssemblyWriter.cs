@@ -3340,8 +3340,6 @@ namespace Mono.Cecil {
 
 				if (sequence_point.IsHidden) {
 					WriteInt16 (0);
-					//WriteCompressedUInt32 (0);
-					//WriteCompressedUInt32 (0);
 					continue;
 				}
 
