@@ -151,7 +151,7 @@ namespace Mono.Cecil {
 
 		static ISymbolWriter GetSymbolWriter (ModuleDefinition module, string fq_name, ISymbolWriterProvider symbol_writer_provider, WriterParameters parameters)
 		{
-			if (symbol_writer_provider == null)
+			if (symbol_writer_provider == null || module.Kind == ModuleKind.NetModule)
 				return null;
 
 			if (parameters.SymbolStream != null)
@@ -1110,7 +1110,7 @@ namespace Mono.Cecil {
 				if (module.IsMain)
 					continue;
 
-#if NET_CORE
+#if NET_COREy
 				throw new NotSupportedException ();
 #else
 				var parameters = new WriterParameters {
@@ -1130,7 +1130,7 @@ namespace Mono.Cecil {
 			}
 		}
 
-#if !NET_CORE
+#if !NET_COREy
 		string GetModuleFileName (string name)
 		{
 			if (string.IsNullOrEmpty (name))
